@@ -29,17 +29,18 @@ crawler.on("fetchcomplete", function (queueItem, responseBuffer, response) {
 
     if (emails) {
         emails.forEach(async (email) => {
-            console.log(email, queueItem.host, queueItem.url)
+            console.log(email, queueItem.host)
             const domain = queueItem.host
             const source = queueItem.url
+            const start_url = url
             const createdAt = moment(new Date().toUTCString()).format('YYYY-MM-DD HH:mm:ss');
 
             try {
                 await knex(project).insert({
-                  email, domain, source, createdAt
+                  email, start_url, domain, source, createdAt
                 })
             } catch (error) {
-                console.log(error)
+                console.log(error.code)
             }
 
         })
