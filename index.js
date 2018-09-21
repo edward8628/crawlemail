@@ -1,27 +1,47 @@
-
+require('dotenv').config();
 const Crawler = require("simplecrawler");
 const cheerio = require('cheerio');
-const url = 'http://bbs.uclacssa.org/forum.php?mod=forumdisplay&fid=37'
-let emails = []
+const moment = require('moment');
+const knex = require('knex')({
+    client: 'mysql',
+    connection: {
+        host: process.env.DB_HOST,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB,
+    },
+})
 
+const url = 'http://bbs.uclacssa.org/forum.php?mod=forumdisplay&fid=37'
+const project = 'dmooji'
 let crawler = new Crawler(url);
 
 // crawler.host = url
 crawler.interval = 10; // Ten seconds
 crawler.maxConcurrency = 3;
 
-crawler.on("fetchcomplete", function(queueItem, responseBuffer, response) {
-    // console.log("I just received %s (%d bytes)", queueItem.url, responseBuffer.length);
+crawler.on("fetchcomplete", function (queueItem, responseBuffer, response) {
+    // console.log("I just received %s (%d by, tes)", queueItem.url, responseBuffer.length);
     // console.log("It was a resource of type %s", response.headers['content-type']);
     let $ = cheerio.load(responseBuffer.toString("utf8"));
     let html = $.html();
-    let list = getEmails(html)
-    if (list) {
-        list.forEach((item) => {
-            if(!emails.includes(item)) {
-                console.log(item)
-                emails.push(item)
+    let emails = getEmails(html)
+
+    if (emails) {
+        emails.forEach(async (email) => {
+            console.log(email, queueItem.host, queueItem.url)
+            const domain = queueItem.host
+            const source = queueItem.url
+            const createdAt = moment(new Date().toUTCString()).format('YYYY-MM-DD HH:mm:ss');
+
+            try {
+                await knex(project).insert({
+                  email, domain, source, createdAt
+                })
+            } catch (error) {
+                console.log(error)
             }
+
         })
     }
 });
@@ -35,15 +55,11 @@ crawler.on("fetchcomplete", function(queueItem, responseBuffer, response) {
 // });
 
 crawler.on("complete", function() {
-    console.log("Finished!", emails.length);
+    console.log("Finished!");
 });
 
 crawler.start();
 
-//todo, trim emails, improve getEmails function
-//todo, push to database with email, date, domain
-
 function getEmails(string) {
-    const emails = string.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi);
-    return emails;
+    return string.match(/([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9._-]+)/gi);
 }
