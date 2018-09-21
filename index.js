@@ -12,7 +12,7 @@ const knex = require('knex')({
     },
 })
 
-const url = 'http://bbs.uclacssa.org/forum.php?mod=forumdisplay&fid=37'
+const url = 'http://www.osubbs.com/forum.php?mod=forumdisplay&fid=37'
 const project = 'dmooji'
 let crawler = new Crawler(url);
 
